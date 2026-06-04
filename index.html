@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🌸 Bucket Besties 🌸</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌸</text></svg>">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * { box-sizing: border-box; font-family: Arial, sans-serif; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #ffd6ec, #e6d4ff, #fff1f8);
+      color: #4d2945;
+    }
+    .stars {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        radial-gradient(circle, white 1px, transparent 1px),
+        radial-gradient(circle, #fff7bd 1px, transparent 1px);
+      background-size: 55px 55px, 95px 95px;
+      opacity: 0.75;
+      z-index: 0;
+    }
+    .container {
+      max-width: 1100px;
+      margin: auto;
+      padding: 24px 14px 60px;
+      position: relative;
+      z-index: 2;
+    }
+    .card {
+      background: rgba(255,255,255,0.68);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.9);
+      border-radius: 28px;
+      padding: 22px;
+      box-shadow: 0 16px 45px rgba(139, 74, 122, 0.18);
+      margin-bottom: 18px;
+    }
+    h1, h2, h3 { text-align: center; margin-top: 0; }
+    input, textarea, select {
+      width: 100%;
+      padding: 13px 15px;
+      border: none;
+      border-radius: 17px;
+      margin: 7px 0;
+      font-size: 1rem;
+      background: rgba(255,255,255,0.92);
+      color: #4d2945;
+      outline: none;
+    }
+    textarea { min-height: 80px; resize: vertical; }
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 10px 16px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #ff7ac8, #b978ff);
+      color: white;
+      font-weight: bold;
+      font-size: 0.95rem;
+      box-shadow: 0 8px 20px rgba(180, 80, 170, 0.22);
+      margin: 4px;
+    }
+    button:hover { transform: scale(1.03); }
+    .soft-btn { background: rgba(255,255,255,0.78); color: #8a3d78; box-shadow: none; }
+    .danger-btn { background: linear-gradient(135deg, #ff6f91, #ff9671); }
+    .green-btn { background: linear-gradient(135deg, #7bdcb5, #8e8cff); }
+    .center { text-align: center; }
+    .hidden { display: none !important; }
+    .small { font-size: 0.9rem; opacity: 0.78; }
+    .meta { opacity: 0.78; font-size: 0.94rem; }
+    .tabs {
+      display: flex;
+      justify-content: center;
+      gap: 7px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+    .tab {
+      background: rgba(255,255,255,0.75);
+      color: #8a3d78;
+      box-shadow: none;
+    }
+    .tab.active {
+      background: linear-gradient(135deg, #ff7ac8, #b978ff);
+      color: white;
+    }
+    .idea-title {
+      font-size: 1.3rem;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .hearts, .row {
+      display: flex;
+      gap: 7px;
+      margin: 10px 0;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .heart, .emoji-btn {
+      background: rgba(255,255,255,0.86);
+      color: #ff4fae;
+      box-shadow: none;
+    }
+    .vote-line, .chat-line, .event-line {
+      background: rgba(255,255,255,0.58);
+      padding: 9px 12px;
+      border-radius: 14px;
+      margin: 6px 0;
+    }
+    .chat-box {
+      max-height: 430px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .photo {
+      width: 100%;
+      max-height: 220px;
+      object-fit: cover;
+      border-radius: 18px;
+      margin-top: 8px;
+    }
+    .calendar-top {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+    }
+    .day-name {
+      text-align: center;
+      font-weight: bold;
+      opacity: 0.75;
+      padding: 8px;
+    }
+    .day {
+      min-height: 95px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.62);
+      padding: 8px;
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.9);
+    }
+    .day:hover { background: rgba(255,255,255,0.9); }
+    .day-number { font-weight: bold; }
+    .day-event { font-size: 0.78rem; margin-top: 4px; color: #8a3d78; }
+    .calendar-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.9fr);
+      gap: 16px;
+      align-items: start;
+    }
+    .upcoming-sticky {
+      position: sticky;
+      top: 16px;
+    }
+    .upcoming-box {
+      background: rgba(255,255,255,0.64);
+      border-radius: 18px;
+      padding: 12px;
+      margin: 8px 0;
+      border: 1px solid rgba(255,255,255,0.9);
+    }
+    .upcoming-date {
+      font-weight: bold;
+      color: #ff4fae;
+    }
+    @media (max-width: 850px) {
+      .calendar-layout { grid-template-columns: 1fr; }
+      .upcoming-sticky { position: static; }
+    }
+    @media (max-width: 700px) {
+      .calendar { gap: 4px; }
+      .day { min-height: 72px; padding: 6px; font-size: 0.85rem; }
+      .calendar-top { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="stars"></div>
+
+  <div class="container">
+    <div id="loginPage" class="card">
+      <h1>🌸 Bucket Besties 🌸</h1>
+      <p class="center">Willkommen cutie 💖 Gib deinen Namen ein, um beizutreten.</p>
+      <input id="nameInput" placeholder="Dein Name..." />
+      <div class="center">
+        <button onclick="saveName()">Beitreten 🌸</button>
+      </div>
+    </div>
+
+    <div id="appPage" class="hidden">
+      <div class="center">
+        <button class="soft-btn" onclick="changeName()">Namen ändern</button>
+      </div>
+
+      <div class="card">
+        <h1>🌸 Bucket Besties 🌸</h1>
+        <p class="center">Hallo <strong id="currentName"></strong> 💕</p>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" id="tabIdeas" onclick="showTab('ideas')">💖 Ideen</button>
+        <button class="tab" id="tabDone" onclick="showTab('done')">✅ Gemacht</button>
+        <button class="tab" id="tabCalendar" onclick="showTab('calendar')">📅 Kalender</button>
+        <button class="tab" id="tabChat" onclick="showTab('chat')">💬 Chat</button>
+      </div>
+
+      <section id="ideasSection">
+        <div class="card">
+          <h2>Neue Idee hinzufügen ✨</h2>
+          <input id="ideaTitle" placeholder="z.B. Düsseldorf, Sushi-Abend, Spa-Day..." />
+          <textarea id="ideaDescription" placeholder="Optionale Beschreibung..."></textarea>
+          <div class="center">
+            <button onclick="addIdea()">Idee hinzufügen 💖</button>
+          </div>
+        </div>
+        <div id="ideasList"></div>
+      </section>
+
+      <section id="doneSection" class="hidden">
+        <div class="card">
+          <h2>✅ Gemachte Aktivitäten</h2>
+          <p class="center small">Hier bleiben eure fertigen Erinnerungen für immer ✨</p>
+        </div>
+        <div id="doneList"></div>
+      </section>
+
+      <section id="calendarSection" class="hidden">
+        <div class="card">
+          <h2>📅 Kalender</h2>
+          <p class="center small">Plant neue Events und seht direkt, wer dabei ist ✨</p>
+        </div>
+
+        <div class="calendar-layout">
+          <div>
+            <div class="card">
+              <h2>📅 Event Kalender</h2>
+              <p class="center small">Wählt einen Monat und klickt auf einen Tag, um ein Event zu planen ✨</p>
+              <div class="calendar-top">
+                <select id="calendarMonth" onchange="renderCalendar()"></select>
+                <select id="calendarYear" onchange="renderCalendar()"></select>
+                <button onclick="openEventPrompt()">Event erstellen ✨</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="calendar" id="calendarGrid"></div>
+            </div>
+
+            <div id="selectedDayEvents"></div>
+          </div>
+
+          <aside class="card upcoming-sticky">
+            <h2>✨ Kommende Events</h2>
+            <p class="center small">Die nächsten Pläne aus dem Kalender 💖</p>
+            <div id="upcomingEventsList"></div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="chatSection" class="hidden">
+        <div class="card">
+          <h2>💬 Besties Chat</h2>
+          <div id="chatList" class="chat-box"></div>
+          <textarea id="chatMessage" placeholder="Nachricht schreiben..."></textarea>
+          <div class="center">
+            <button onclick="sendMessage()">Senden 💌</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://agyzrvuqhqwexuaqgddf.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_6GG97dXy92_sydn0p9xnDQ_Qut_nPCx";
+
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const PHOTO_BUCKET = "photos";
+
+    let currentUser = localStorage.getItem("bucketBestiesV3Name");
+    let allIdeas = [];
+    let allVotes = [];
+    let allEvents = [];
+    let allAttendance = [];
+    let selectedDate = null;
+
+    const monthNames = [
+      "Januar", "Februar", "März", "April", "Mai", "Juni",
+      "Juli", "August", "September", "Oktober", "November", "Dezember"
+    ];
+
+    function hearts(number) {
+      return "💖".repeat(number) + "🤍".repeat(5 - number);
+    }
+
+    function saveName() {
+      const name = document.getElementById("nameInput").value.trim();
+      if (!name) return alert("Bitte gib deinen Namen ein 💕");
+
+      localStorage.setItem("bucketBestiesV3Name", name);
+      currentUser = name;
+      showApp();
+    }
+
+    function changeName() {
+      localStorage.removeItem("bucketBestiesV3Name");
+      location.reload();
+    }
+
+    function showApp() {
+      document.getElementById("loginPage").classList.add("hidden");
+      document.getElementById("appPage").classList.remove("hidden");
+      document.getElementById("currentName").textContent = currentUser;
+      initCalendarControls();
+      loadEverything();
+    }
+
+    function showTab(tab) {
+      ["ideas", "done", "calendar", "chat"].forEach(name => {
+        document.getElementById(name + "Section").classList.add("hidden");
+        document.getElementById("tab" + capitalize(name)).classList.remove("active");
+      });
+
+      document.getElementById(tab + "Section").classList.remove("hidden");
+      document.getElementById("tab" + capitalize(tab)).classList.add("active");
+
+      if (tab === "ideas" || tab === "done") loadIdeas();
+      if (tab === "calendar") loadCalendarData();
+      if (tab === "chat") loadChat();
+    }
+
+    function capitalize(text) {
+      return text.charAt(0).toUpperCase() + text.slice(1);
+    }
+
+    async function loadEverything() {
+      await loadIdeas();
+      await loadCalendarData();
+      await loadChat();
+    }
+
+    async function addIdea() {
+      const title = document.getElementById("ideaTitle").value.trim();
+      const description = document.getElementById("ideaDescription").value.trim();
+
+      if (!title) return alert("Bitte schreibe zuerst eine Idee ✨");
+
+      const { error } = await supabaseClient.from("ideas").insert({
+        title,
+        description,
+        created_by: currentUser,
+        is_done: false
+      });
+
+      if (error) return alert("Fehler: " + error.message);
+
+      document.getElementById("ideaTitle").value = "";
+      document.getElementById("ideaDescription").value = "";
+      loadIdeas();
+    }
+
+    async function editIdea(ideaId, oldTitle, oldDescription) {
+      const title = prompt("Neuer Titel:", oldTitle);
+      if (title === null) return;
+
+      const description = prompt("Neue Beschreibung:", oldDescription || "");
+      if (description === null) return;
+
+      const { error } = await supabaseClient
+        .from("ideas")
+        .update({ title, description })
+        .eq("id", ideaId);
+
+      if (error) return alert("Fehler: " + error.message);
+      loadIdeas();
+    }
+
+    async function deleteIdea(ideaId) {
+      if (!confirm("Diese Idee wirklich löschen? 🗑️")) return;
+
+      const { error } = await supabaseClient
+        .from("ideas")
+        .delete()
+        .eq("id", ideaId);
+
+      if (error) return alert("Fehler: " + error.message);
+      loadIdeas();
+    }
+
+    async function vote(ideaId, rating) {
+      const { error } = await supabaseClient
+        .from("votes")
+        .upsert(
+          { idea_id: ideaId, voter_name: currentUser, rating },
+          { onConflict: "idea_id,voter_name" }
+        );
+
+      if (error) return alert("Fehler beim Bewerten: " + error.message);
+      loadIdeas();
+    }
+
+    async function markDone(ideaId) {
+      const participants = prompt("Wer war dabei? Beispiel: Yasmin, Lina, Eliott");
+      if (participants === null) return;
+
+      const memoryNote = prompt("Kleine Erinnerung oder Kommentar? ✨");
+      const today = new Date().toISOString().split("T")[0];
+
+      const { error } = await supabaseClient
+        .from("ideas")
+        .update({
+          is_done: true,
+          done_date: today,
+          participants,
+          memory_note: memoryNote || ""
+        })
+        .eq("id", ideaId);
+
+      if (error) return alert("Fehler: " + error.message);
+
+      loadIdeas();
+      showTab("done");
+    }
+
+    async function undoDone(ideaId) {
+      const { error } = await supabaseClient
+        .from("ideas")
+        .update({
+          is_done: false,
+          done_date: null,
+          participants: null,
+          memory_note: null
+        })
+        .eq("id", ideaId);
+
+      if (error) return alert("Fehler: " + error.message);
+
+      loadIdeas();
+      showTab("ideas");
+    }
+
+    async function uploadPhoto(ideaId, input) {
+      const file = input.files[0];
+      if (!file) return;
+
+      const path = `${ideaId}/${Date.now()}-${file.name}`;
+
+      const { error: uploadError } = await supabaseClient.storage
+        .from(PHOTO_BUCKET)
+        .upload(path, file);
+
+      if (uploadError) return alert("Foto Fehler: " + uploadError.message);
+
+      const { data } = supabaseClient.storage.from(PHOTO_BUCKET).getPublicUrl(path);
+
+      const { error } = await supabaseClient
+        .from("activity_photos")
+        .insert({
+          idea_id: ideaId,
+          photo_url: data.publicUrl,
+          uploaded_by: currentUser
+        });
+
+      if (error) return alert("Foto speichern Fehler: " + error.message);
+
+      loadIdeas();
+    }
+
+    async function loadIdeas() {
+      const ideasRes = await supabaseClient.from("ideas").select("*").order("created_at", { ascending: false });
+      const votesRes = await supabaseClient.from("votes").select("*");
+      const photosRes = await supabaseClient.from("activity_photos").select("*").order("created_at", { ascending: false });
+
+      if (ideasRes.error || votesRes.error || photosRes.error) {
+        return alert("Fehler beim Laden: " + (ideasRes.error?.message || votesRes.error?.message || photosRes.error?.message));
+      }
+
+      allIdeas = ideasRes.data || [];
+      allVotes = votesRes.data || [];
+
+      renderIdeas(allIdeas, allVotes);
+      renderDone(allIdeas, allVotes, photosRes.data || []);
+    }
+
+    function addScores(ideas, votes) {
+      return ideas.map(idea => {
+        const ideaVotes = votes.filter(v => v.idea_id === idea.id);
+        const average = ideaVotes.length
+          ? ideaVotes.reduce((sum, v) => sum + v.rating, 0) / ideaVotes.length
+          : 0;
+
+        return { ...idea, votes: ideaVotes, average };
+      }).sort((a, b) => b.average - a.average);
+    }
+
+    function renderIdeas(ideas, votes) {
+      const list = document.getElementById("ideasList");
+      list.innerHTML = "";
+
+      const openIdeas = addScores(ideas.filter(i => !i.is_done), votes);
+
+      if (!openIdeas.length) {
+        list.innerHTML = `<div class="card center">Noch keine offene Idee ✨</div>`;
+        return;
+      }
+
+      openIdeas.forEach(idea => {
+        const averageText = idea.votes.length
+          ? `${hearts(Math.round(idea.average))} ${idea.average.toFixed(1)}/5`
+          : "Noch keine Bewertung";
+
+        const votesHtml = idea.votes.length
+          ? idea.votes.map(v => `
+              <div class="vote-line">
+                <strong>${escapeHtml(v.voter_name)}</strong> — ${hearts(v.rating)} ${v.rating}/5
+              </div>
+            `).join("")
+          : `<p class="meta">Noch niemand hat bewertet 💭</p>`;
+
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <div class="idea-title">${escapeHtml(idea.title)}</div>
+          <div class="meta">Vorgeschlagen von ${escapeHtml(idea.created_by)}</div>
+          <p><strong>${averageText}</strong></p>
+          ${idea.description ? `<p>${escapeHtml(idea.description)}</p>` : ""}
+
+          <div class="hearts">
+            <button class="heart" onclick="vote('${idea.id}', 1)">💖 1</button>
+            <button class="heart" onclick="vote('${idea.id}', 2)">💖 2</button>
+            <button class="heart" onclick="vote('${idea.id}', 3)">💖 3</button>
+            <button class="heart" onclick="vote('${idea.id}', 4)">💖 4</button>
+            <button class="heart" onclick="vote('${idea.id}', 5)">💖 5</button>
+          </div>
+
+          <div><strong>Bewertungen ✨</strong>${votesHtml}</div>
+
+          <div class="center">
+            <button class="green-btn" onclick="markDone('${idea.id}')">Als gemacht markieren ✅</button>
+            <button class="soft-btn" onclick="editIdea('${idea.id}', '${safeAttr(idea.title)}', '${safeAttr(idea.description || "")}')">Bearbeiten ✏️</button>
+            <button class="danger-btn" onclick="deleteIdea('${idea.id}')">Löschen 🗑️</button>
+          </div>
+        `;
+
+        list.appendChild(card);
+      });
+    }
+
+    function renderDone(ideas, votes, photos) {
+      const list = document.getElementById("doneList");
+      list.innerHTML = "";
+
+      const doneIdeas = addScores(ideas.filter(i => i.is_done), votes);
+
+      if (!doneIdeas.length) {
+        list.innerHTML = `<div class="card center">Noch keine gemachten Aktivitäten 💭</div>`;
+        return;
+      }
+
+      doneIdeas.forEach(idea => {
+        const ideaPhotos = photos.filter(p => p.idea_id === idea.id);
+
+        const photosHtml = ideaPhotos.map(p => `
+          <img class="photo" src="${escapeHtml(p.photo_url)}" alt="Foto">
+          <div class="small">Hochgeladen von ${escapeHtml(p.uploaded_by)}</div>
+        `).join("");
+
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <div class="idea-title">✅ ${escapeHtml(idea.title)}</div>
+          <div class="meta">Vorgeschlagen von ${escapeHtml(idea.created_by)}</div>
+          ${idea.description ? `<p>${escapeHtml(idea.description)}</p>` : ""}
+          <p><strong>Gemacht am:</strong> ${idea.done_date || "Kein Datum"}</p>
+          <p><strong>Dabei waren:</strong> ${escapeHtml(idea.participants || "Nicht angegeben")}</p>
+          ${idea.memory_note ? `<p><strong>Erinnerung:</strong> ${escapeHtml(idea.memory_note)}</p>` : ""}
+
+          <h3>📸 Fotos</h3>
+          ${photosHtml || `<p class="small center">Noch keine Fotos</p>`}
+          <input type="file" accept="image/*" onchange="uploadPhoto('${idea.id}', this)" />
+
+          <div class="center">
+            <button class="soft-btn" onclick="undoDone('${idea.id}')">Zurück zu Ideen ↩️</button>
+            <button class="danger-btn" onclick="deleteIdea('${idea.id}')">Löschen 🗑️</button>
+          </div>
+        `;
+
+        list.appendChild(card);
+      });
+    }
+
+    async function sendMessage() {
+      const message = document.getElementById("chatMessage").value.trim();
+      if (!message) return alert("Bitte schreibe eine Nachricht 💌");
+
+      const { error } = await supabaseClient
+        .from("chat_messages")
+        .insert({ sender_name: currentUser, message });
+
+      if (error) return alert("Fehler beim Senden: " + error.message);
+
+      document.getElementById("chatMessage").value = "";
+      loadChat();
+    }
+
+    async function loadChat() {
+      const messagesRes = await supabaseClient.from("chat_messages").select("*").order("created_at", { ascending: true });
+      const reactionsRes = await supabaseClient.from("chat_reactions").select("*");
+
+      if (messagesRes.error || reactionsRes.error) return alert("Chat Fehler");
+
+      const messages = messagesRes.data || [];
+      const reactions = reactionsRes.data || [];
+      const chatList = document.getElementById("chatList");
+      chatList.innerHTML = "";
+
+      if (!messages.length) {
+        chatList.innerHTML = `<p class="center small">Noch keine Nachrichten ✨</p>`;
+        return;
+      }
+
+      messages.forEach(msg => {
+        const msgReactions = reactions.filter(r => r.message_id === msg.id);
+
+        const reactionText = ["💖", "😂", "✨", "🥹", "🌸"].map(emoji => {
+          const count = msgReactions.filter(r => r.emoji === emoji).length;
+          return `<button class="emoji-btn" onclick="reactToMessage('${msg.id}', '${emoji}')">${emoji}${count ? " " + count : ""}</button>`;
+        }).join("");
+
+        const date = new Date(msg.created_at).toLocaleString("de-DE");
+
+        const line = document.createElement("div");
+        line.className = "chat-line";
+        line.innerHTML = `
+          <strong>${escapeHtml(msg.sender_name)}</strong>
+          <span class="small"> — ${date}</span><br>
+          ${escapeHtml(msg.message)}
+          <div class="row">${reactionText}</div>
+          <button class="danger-btn" onclick="deleteMessage('${msg.id}')">Löschen 🗑️</button>
+        `;
+
+        chatList.appendChild(line);
+      });
+
+      chatList.scrollTop = chatList.scrollHeight;
+    }
+
+    async function reactToMessage(messageId, emoji) {
+      const { error } = await supabaseClient
+        .from("chat_reactions")
+        .upsert(
+          { message_id: messageId, user_name: currentUser, emoji },
+          { onConflict: "message_id,user_name,emoji" }
+        );
+
+      if (error) return alert("Reaktion Fehler: " + error.message);
+      loadChat();
+    }
+
+    async function deleteMessage(messageId) {
+      if (!confirm("Nachricht löschen?")) return;
+
+      await supabaseClient
+        .from("chat_messages")
+        .delete()
+        .eq("id", messageId);
+
+      loadChat();
+    }
+
+    function initCalendarControls() {
+      const monthSelect = document.getElementById("calendarMonth");
+      const yearSelect = document.getElementById("calendarYear");
+
+      if (monthSelect.options.length) return;
+
+      monthNames.forEach((m, i) => {
+        const opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = m;
+        monthSelect.appendChild(opt);
+      });
+
+      const currentYear = new Date().getFullYear();
+
+      for (let y = currentYear; y <= currentYear + 80; y++) {
+        const opt = document.createElement("option");
+        opt.value = y;
+        opt.textContent = y;
+        yearSelect.appendChild(opt);
+      }
+
+      monthSelect.value = new Date().getMonth();
+      yearSelect.value = currentYear;
+    }
+
+    async function loadCalendarData() {
+      const eventsRes = await supabaseClient
+        .from("calendar_events")
+        .select("*")
+        .order("event_date", { ascending: true });
+
+      const attendanceRes = await supabaseClient
+        .from("calendar_attendance")
+        .select("*");
+
+      if (eventsRes.error || attendanceRes.error) return alert("Kalender Fehler");
+
+      allEvents = eventsRes.data || [];
+      allAttendance = attendanceRes.data || [];
+
+      renderCalendar();
+      renderUpcomingEvents();
+    }
+
+    function renderUpcomingEvents() {
+      const list = document.getElementById("upcomingEventsList");
+      if (!list) return;
+
+      const today = new Date().toISOString().split("T")[0];
+
+      const upcoming = allEvents
+        .filter(event => event.event_date >= today)
+        .sort((a, b) => a.event_date.localeCompare(b.event_date))
+        .slice(0, 8);
+
+      list.innerHTML = "";
+
+      if (!upcoming.length) {
+        list.innerHTML = `<p class="center small">Noch keine kommenden Events 💭</p>`;
+        return;
+      }
+
+      upcoming.forEach(event => {
+        const attendance = allAttendance.filter(a => a.event_id === event.id);
+        const yesCount = attendance.filter(a => a.status === "yes").length;
+        const maybeCount = attendance.filter(a => a.status === "maybe").length;
+        const noCount = attendance.filter(a => a.status === "no").length;
+
+        const box = document.createElement("div");
+        box.className = "upcoming-box";
+        box.innerHTML = `
+          <div class="upcoming-date">${new Date(event.event_date).toLocaleDateString("de-DE")}</div>
+          <strong>${escapeHtml(event.title)}</strong>
+          ${event.description ? `<div class="small">${escapeHtml(event.description)}</div>` : ""}
+          <div class="small">✅ ${yesCount} · 🤔 ${maybeCount} · ❌ ${noCount}</div>
+          <button class="soft-btn" onclick="selectDate('${event.event_date}')">Ansehen</button>
+        `;
+
+        list.appendChild(box);
+      });
+    }
+
+    function renderCalendar() {
+      const month = Number(document.getElementById("calendarMonth").value);
+      const year = Number(document.getElementById("calendarYear").value);
+      const grid = document.getElementById("calendarGrid");
+
+      grid.innerHTML = "";
+
+      ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"].forEach(d => {
+        const el = document.createElement("div");
+        el.className = "day-name";
+        el.textContent = d;
+        grid.appendChild(el);
+      });
+
+      const first = new Date(year, month, 1);
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      let startDay = first.getDay();
+      startDay = startDay === 0 ? 6 : startDay - 1;
+
+      for (let i = 0; i < startDay; i++) {
+        grid.appendChild(document.createElement("div"));
+      }
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = formatDate(year, month, day);
+        const events = allEvents.filter(e => e.event_date === date);
+
+        const div = document.createElement("div");
+        div.className = "day";
+        div.onclick = () => selectDate(date);
+        div.innerHTML = `
+          <div class="day-number">${day}</div>
+          ${events.slice(0, 2).map(e => `<div class="day-event">✨ ${escapeHtml(e.title)}</div>`).join("")}
+          ${events.length > 2 ? `<div class="day-event">+${events.length - 2} mehr</div>` : ""}
+        `;
+
+        grid.appendChild(div);
+      }
+
+      if (selectedDate) renderSelectedDay();
+    }
+
+    function selectDate(date) {
+      selectedDate = date;
+      renderSelectedDay();
+    }
+
+    function renderSelectedDay() {
+      const container = document.getElementById("selectedDayEvents");
+      const events = allEvents.filter(e => e.event_date === selectedDate);
+
+      container.innerHTML = `
+        <div class="card">
+          <h2>📅 ${new Date(selectedDate).toLocaleDateString("de-DE")}</h2>
+          <div class="center">
+            <button onclick="openEventPrompt('${selectedDate}')">Event für diesen Tag erstellen ✨</button>
+          </div>
+          ${events.length ? "" : `<p class="center small">Keine Events an diesem Tag</p>`}
+          <div id="dayEventsList"></div>
+        </div>
+      `;
+
+      const list = document.getElementById("dayEventsList");
+
+      events.forEach(event => {
+        const attendance = allAttendance.filter(a => a.event_id === event.id);
+
+        const yes = attendance.filter(a => a.status === "yes").map(a => a.user_name).join(", ") || "-";
+        const no = attendance.filter(a => a.status === "no").map(a => a.user_name).join(", ") || "-";
+        const maybe = attendance.filter(a => a.status === "maybe").map(a => a.user_name).join(", ") || "-";
+
+        const div = document.createElement("div");
+        div.className = "event-line";
+        div.innerHTML = `
+          <strong>${escapeHtml(event.title)}</strong><br>
+          <span class="small">Erstellt von ${escapeHtml(event.created_by)}</span>
+          ${event.description ? `<p>${escapeHtml(event.description)}</p>` : ""}
+          <p>✅ Dabei: ${escapeHtml(yes)}</p>
+          <p>❌ Nicht dabei: ${escapeHtml(no)}</p>
+          <p>🤔 Vielleicht: ${escapeHtml(maybe)}</p>
+          <button onclick="setAttendance('${event.id}', 'yes')">✅ Ich bin dabei</button>
+          <button onclick="setAttendance('${event.id}', 'no')">❌ Ich kann nicht</button>
+          <button onclick="setAttendance('${event.id}', 'maybe')">🤔 Vielleicht</button>
+          <button class="soft-btn" onclick="editEvent('${event.id}', '${safeAttr(event.title)}', '${safeAttr(event.description || "")}')">Bearbeiten ✏️</button>
+          <button class="danger-btn" onclick="deleteEvent('${event.id}')">Löschen 🗑️</button>
+        `;
+
+        list.appendChild(div);
+      });
+    }
+
+    async function openEventPrompt(dateFromClick) {
+      const date = dateFromClick || selectedDate || prompt("Datum im Format YYYY-MM-DD:");
+      if (!date) return;
+
+      const title = prompt("Titel des Events:");
+      if (!title) return;
+
+      const description = prompt("Beschreibung:");
+
+      const { error } = await supabaseClient
+        .from("calendar_events")
+        .insert({
+          event_date: date,
+          title,
+          description: description || "",
+          created_by: currentUser
+        });
+
+      if (error) return alert("Event Fehler: " + error.message);
+
+      selectedDate = date;
+      await loadCalendarData();
+      renderSelectedDay();
+    }
+
+    async function editEvent(eventId, oldTitle, oldDescription) {
+      const title = prompt("Neuer Titel:", oldTitle);
+      if (title === null) return;
+
+      const description = prompt("Neue Beschreibung:", oldDescription || "");
+      if (description === null) return;
+
+      const { error } = await supabaseClient
+        .from("calendar_events")
+        .update({ title, description })
+        .eq("id", eventId);
+
+      if (error) return alert("Event Fehler: " + error.message);
+
+      loadCalendarData();
+    }
+
+    async function deleteEvent(eventId) {
+      if (!confirm("Event wirklich löschen?")) return;
+
+      await supabaseClient
+        .from("calendar_events")
+        .delete()
+        .eq("id", eventId);
+
+      loadCalendarData();
+    }
+
+    async function setAttendance(eventId, status) {
+      const { error } = await supabaseClient
+        .from("calendar_attendance")
+        .upsert(
+          { event_id: eventId, user_name: currentUser, status },
+          { onConflict: "event_id,user_name" }
+        );
+
+      if (error) return alert("Teilnahme Fehler: " + error.message);
+
+      await loadCalendarData();
+      renderSelectedDay();
+    }
+
+    function formatDate(year, month, day) {
+      return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    }
+
+    function escapeHtml(text) {
+      return String(text ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function safeAttr(text) {
+      return String(text ?? "")
+        .replaceAll("\\", "\\\\")
+        .replaceAll("'", "\\'")
+        .replaceAll('"', "&quot;")
+        .replaceAll("\n", " ");
+    }
+
+    if (currentUser) showApp();
+  </script>
+</body>
+</html>
